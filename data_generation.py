@@ -93,8 +93,8 @@ def main_loop(reward_func, runs=100):
     df_list = []
 
     for run in tqdm(range(runs)):
-        if run > 0.8 * runs:
-            min_year = np.random.randint(1900, 2100)
+        if run > 0.5 * runs:
+            min_year = np.random.randint(1925, 2100)
         else:
             min_year = 1900
         
