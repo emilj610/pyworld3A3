@@ -114,7 +114,7 @@ def main_loop(reward_func, runs=100):
     df = pd.concat(df_list, ignore_index=True)
     return df
 
-def main():   
+def main():
     chosen_reward = reward_le
     df = main_loop(chosen_reward, 1000)
     reward_func_name = chosen_reward.__name__
