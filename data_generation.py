@@ -42,6 +42,11 @@ def reward_pop(world):
 def reward_le(world):
     return world.le
 
+def reward_pop_stable(world):
+    reward = np.zeros(world.n)
+    reward[1:-1] = world.pop[1:-1] - world.pop[0:-2]
+    return reward
+
 def get_mu_sigma(world, variable):
     """
     Gets mean and standard deviation of all state variables
@@ -83,7 +88,7 @@ def main_loop(reward_func, runs=100):
         dataframe with states and reward for that state
     
     Simulates randomized runs of the world3 model without any control. Randomizing input based on the standard run
-    20% of the runs will also start at a random year chosen uniformly between 1900 and 2100
+    50% of the runs will also start at a random year chosen uniformly between 1900 and 2100
     """
 
     variables = state_variables
@@ -114,8 +119,11 @@ def main_loop(reward_func, runs=100):
     df = pd.concat(df_list, ignore_index=True)
     return df
 
+def reward_le_50(world):
+    return - (world.le - 50) ** 2
+
 def main():
-    chosen_reward = reward_le
+    chosen_reward = reward_le_50
     df = main_loop(chosen_reward, 1000)
     reward_func_name = chosen_reward.__name__
     df.to_parquet(f"data_{reward_func_name}.parquet", index=False)
