@@ -86,7 +86,6 @@ def generate_initial(total_runs, variables):
         array.append(dict)
     return array
 
-
 def run_random_runs(reward_func, runs=100):
     """ 
     In: 
@@ -125,10 +124,6 @@ def run_random_runs(reward_func, runs=100):
         df_list.append(run_df)
     
     df = pd.concat(df_list, ignore_index=True)
-    return df
-
-def generate_first_data(chosen_reward, runs=1000):
-    df = run_random_runs(chosen_reward, runs)
     return df
 
 class neuralNet(nn.Module):
@@ -172,9 +167,9 @@ def train_network(df):
 
     model = neuralNet(X_train.shape[1], 1)
     loss_func = nn.MSELoss() 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01) # Optimizing weights
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001) # Optimizing weights
 
-    epochs = 250
+    epochs = 300
     losses = np.zeros((epochs,1))
     model.train()
 
@@ -266,15 +261,15 @@ def get_fioac_control(world3, k, steps, J_hat, reward_func):
             control = val
     return control
 
-def optimize_run(model, normalizer, reward):
+def optimize_run(model, normalizer, reward, initial_values):
     world_control = World3(year_max=2100)
     world_control.set_world3_control()
-    world_control.init_world3_constants()
+    world_control.init_world3_constants(**initial_values)
     world_control.init_world3_variables()
     world_control.set_world3_table_functions()
     world_control.set_world3_delay_functions()
-
-    for k in tqdm(range(1,world_control.n), disable=not show_progress):
+    loop0(world_control)
+    for k in range(1,world_control.n):
         if k % 10 == 0:
             J_hat = lambda world, k: nn_first_func(model, world, k, normalizer)
             control_val = get_fioac_control(world_control, k, 10, J_hat, reward)
@@ -282,14 +277,37 @@ def optimize_run(model, normalizer, reward):
             world_control._loopk_world3_fast(k -1, k, k-1, k)
         else:
             world_control._loopk_world3_fast(k -1, k, k-1, k)
+    return world_control
 
-def first_cycle():
-    chosen_reward = reward_pop
+def random_optimized(model, normalizer, chosen_reward, runs=100):
+    """
+    In:
+        model: model for J function
+        normalizer: normalizer that was used to 
+    """
+    df_list = []
+    not_time_variables = [var for var in state_variables if var != 'time']
+    initial_values = generate_initial(runs, not_time_variables)
+    for run in tqdm(range(runs), disable=(not show_progress)):
+        world = optimize_run(model, normalizer, chosen_reward, initial_values[run])
+        run_df = pd.DataFrame({var: getattr(world, var) for var in state_variables})
+        run_df["J"] = J_func(chosen_reward(world))
+        df_list.append(run_df)
+    df = pd.concat(df_list, ignore_index=True)
+    return df
+
+def main():
+    chosen_reward = reward_le
     write_out("Generating first cycle training data")
-    df = generate_first_data(chosen_reward, 100)
+    first_cycle_runs = 1000
+    df = run_random_runs(chosen_reward, first_cycle_runs)
     write_out("Training neural network: ")
     model, normalizer = train_network(df)
-    write_out("Optimizing runs: ")
-    world = optimize_run(model, normalizer, chosen_reward)
+    write_out("Generating second data: ")
+    second_cycle_runs = 100
+    df = random_optimized(model, normalizer, chosen_reward, second_cycle_runs)
+    reward_func_name = chosen_reward.__name__
+    df.to_parquet(f"datasets/data_{reward_func_name}_v2.parquet", index=False)
+    write_out("Done! :)")
 
-first_cycle()
+main()
