@@ -5,6 +5,7 @@ import numpy as np
 from pyworld3 import World3
 import pandas as pd
 from tqdm import tqdm
+from matplotlib import pyplot as plt
 
 state_variables = ["p1", "p2", "p3", "p4", "ic", "sc", "al", "pal", "uil", "lfert", "ppol", "nr", "time"]
 
@@ -46,6 +47,31 @@ def reward_pop_stable(world):
     reward = np.zeros(world.n)
     reward[1:-1] = world.pop[1:-1] - world.pop[0:-2]
     return reward
+
+
+def reward_HDI(world):
+
+    # le: life expactancy [years], want a high value
+    # j/pop: determine unemployment, a high value is önskvärt and would simule a low global unemployment
+    # d1: deaths per year, ages 0-14 [persons/year], should simulate infants deaths, wants a low value therefore using a minustecken 
+
+    # Collect max-values from standard run for le, j/pop, -d1 (minustecken pga tvinga att vi vill att den är låg)
+    max_le_standard = np.max(world_standard.le)
+    max_jpop_standard = np.max(world_standard.j / world_standard.pop)
+    max_d1_standard = np.max(world_standard.d1)
+
+    # Create HDI
+    jpop = world.j/world.pop
+    reward = ((world.le/max_le_standard) + (jpop/max_jpop_standard) - (world.d1/max_d1_standard)) / 3
+    return reward
+
+#print(reward_HDI(world_standard))
+#plt.plot(reward_HDI(world_standard))
+#plt.show()
+    
+def reward_le_50(world):
+    return - (world.le - 50) ** 2
+
 
 def get_mu_sigma(world, variable):
     """
@@ -119,12 +145,10 @@ def main_loop(reward_func, runs=100):
     df = pd.concat(df_list, ignore_index=True)
     return df
 
-def reward_le_50(world):
-    return - (world.le - 50) ** 2
 
 def main():
-    chosen_reward = reward_le_50
-    df = main_loop(chosen_reward, 1000)
+    chosen_reward = reward_HDI
+    df = main_loop(chosen_reward, 500)
     reward_func_name = chosen_reward.__name__
     df.to_parquet(f"data_{reward_func_name}.parquet", index=False)
 
