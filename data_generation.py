@@ -52,7 +52,7 @@ def reward_pop_stable(world):
 def reward_HDI(world):
 
     # le: life expactancy [years], want a high value
-    # j/pop: determine unemployment, a high value is önskvärt and would simule a low global unemployment
+    # j/pop: determine unemployment, a high value is seeked and would simule a low global unemployment
     # d1: deaths per year, ages 0-14 [persons/year], should simulate infants deaths, wants a low value therefore using a minustecken 
 
     # Collect max-values from standard run for le, j/pop, -d1 (minustecken pga tvinga att vi vill att den är låg)
@@ -68,6 +68,44 @@ def reward_HDI(world):
 #print(reward_HDI(world_standard))
 #plt.plot(reward_HDI(world_standard))
 #plt.show()
+
+def reward_HSDI(world):
+    # le: life expectancy
+    # j/pop: determine unemployment, a high value is seeked and would simule a low global unemployment, will substitute for education
+    # sopc: service output per capital [dollars/person-year], will substitute for GNP
+    # ppol/pop: persistent pollution per capita
+
+    # le
+    min_le = 20
+    max_le = 85
+    I_le = (world.le - min_le) / (max_le - min_le)
+    I_le = np.clip(I_le, 0, 1)      # keeps the index between 0 and 1
+
+    # j/pop
+    min_jpop = 0
+    max_jpop = 1
+    jpop = world.j/world.pop
+    jpop = np.clip(jpop, 0, 1)
+    I_jpop = (jpop - min_jpop) / (max_jpop - min_jpop)
+
+    # sopc
+    min_sopc = np.min(world_standard.sopc)
+    max_sopc = np.max(world_standard.sopc)
+    I_sopc = (world.sopc - min_sopc) / (max_sopc - min_sopc)
+    I_sopc = np.clip(I_sopc, 0, 1)
+
+    # ppol/pop
+    min_ppol_pop = 0
+    max_ppol_pop = 1
+    ppol_pop = world.ppol / world.pop
+    ppol_pop = np.clip(ppol_pop, 0, 1)
+    I_ppol_pop = 1 - ((ppol_pop - min_ppol_pop) / (max_ppol_pop - min_ppol_pop))
+
+    # HSDI
+    reward = (I_le * I_jpop * I_sopc * I_ppol_pop)**(1/4)
+    return reward   
+
+
     
 def reward_le_50(world):
     return - (world.le - 50) ** 2
@@ -147,7 +185,7 @@ def main_loop(reward_func, runs=100):
 
 
 def main():
-    chosen_reward = reward_HDI
+    chosen_reward = reward_HSDI
     df = main_loop(chosen_reward, 500)
     reward_func_name = chosen_reward.__name__
     df.to_parquet(f"data_{reward_func_name}.parquet", index=False)
