@@ -2,7 +2,6 @@
 Generates the needed data of J to train the neural network model, saves a dataframe with states and rewards as a parquet file
 """
 import numpy as np
-from sympy import N
 from pyworld3 import World3
 import pandas as pd
 from tqdm import tqdm
@@ -11,7 +10,7 @@ import torch.nn as nn
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-show_progress = True
+show_progress = False
 state_variables = ["p1", "p2", "p3", "p4", "ic", "sc", "al", "pal", "uil", "lfert", "ppol", "nr", "time"]
 
 # Standard run used for randomizing initial state
@@ -219,7 +218,7 @@ def loop0(world):
         world.loop0_resource()
     
 def generate_fioac_control_values():
-    return np.linspace(0,1,50)
+    return np.linspace(0,1,20)
 
 def get_fioac_control(world3, k, steps, J_hat, J_normalizer, reward_func):
     """ 
@@ -242,7 +241,9 @@ def get_fioac_control(world3, k, steps, J_hat, J_normalizer, reward_func):
         if k_new != k+steps-1:
             reward += reward_func(world3, k_new)
         else:
-            reward += J_hat(world3, k_new)
+            J_val = np.array(J_hat(world3, k_new)).reshape(-1,1)
+            J_val = J_normalizer.inverse_transform(J_val)[0,0] 
+            reward += J_val
     best_J = reward
     fioac_controls = generate_fioac_control_values()
 
@@ -254,10 +255,9 @@ def get_fioac_control(world3, k, steps, J_hat, J_normalizer, reward_func):
             if k_new != k+steps-1:
                 reward += reward_func(world3, k_new)
             else:
-                J_val = J_hat(world3, k_new)
                 J_val = np.array(J_hat(world3, k_new)).reshape(-1,1)
-                J_val = J_normalizer.inverse_transform(J_val)
-                reward += J_normalizer.inverse_transform(J_val)
+                J_val = J_normalizer.inverse_transform(J_val)[0,0]
+                reward += J_val
         if reward > best_J:
             best_J = reward
             control = val
@@ -274,7 +274,7 @@ def optimize_run(model, X_normalizer, J_normalizer, reward, initial_values):
     for k in range(1,world_control.n):
         if k % 10 == 0:
             J_hat = lambda world, k: nn_first_func(model, world, k, X_normalizer)
-            control_val = get_fioac_control(world_control, k, 10, J_hat, J_normalizer, reward)
+            control_val = get_fioac_control(world_control, k, 20, J_hat, J_normalizer, reward)
             world_control.fioac_control = lambda _: control_val
             world_control._loopk_world3_fast(k -1, k, k-1, k)
         else:
@@ -306,10 +306,10 @@ def main():
     write_out("Training neural network: ")
     model, X_normalizer, J_normalizer = train_network(df)
     write_out("Generating second data: ")
-    second_cycle_runs = 100
+    second_cycle_runs = 1000
     df = random_optimized(model, X_normalizer, J_normalizer, chosen_reward, second_cycle_runs)
     reward_func_name = chosen_reward.__name__
-    df.to_parquet(f"datasets/data_{reward_func_name}_v2.parquet", index=False)
+    df.to_parquet(f"data_{reward_func_name}_v2.parquet", index=False)
     write_out("Done! :)")
 
 main()
