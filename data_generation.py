@@ -152,7 +152,8 @@ def main_loop(reward_func, runs=100):
         dataframe with states and reward for that state
     
     Simulates randomized runs of the world3 model without any control. Randomizing input based on the standard run
-    50% of the runs will also start at a random year chosen uniformly between 1900 and 2100
+    25% of the runs will also start at a random year chosen uniformly between 1901 and 2100
+    25% of the runs will also end at a random year chosen uniformly between  1900 and 2100
     """
 
     variables = state_variables
@@ -162,11 +163,15 @@ def main_loop(reward_func, runs=100):
     df_list = []
 
     for run in tqdm(range(runs)):
-        if run > 0.5 * runs:
-            min_year = np.random.randint(1925, 2100)
+        if run > 0.75 * runs:
+            min_year = np.random.randint(1901, 2100)
+            max_year = 2100
+        elif run < 0.25 * runs:
+            max_year = np.random.randint(1901, 2100)
+            min_year = 1900
         else:
             min_year = 1900
-        
+            max_year = 2100
         world3 = World3(year_max=2100, year_min=min_year)
         world3.set_world3_control()
         world3.init_world3_constants(**initial_values[run])
@@ -178,6 +183,7 @@ def main_loop(reward_func, runs=100):
         # temporary dataframe
         run_df = pd.DataFrame({var: getattr(world3, var) for var in variables})
         run_df["J"] = J_func(reward_func(world3))
+        run_df = run_df[run_df['time'] <= max_year]
         df_list.append(run_df)
     
     df = pd.concat(df_list, ignore_index=True)
@@ -186,8 +192,8 @@ def main_loop(reward_func, runs=100):
 
 def main():
     chosen_reward = reward_HSDI
-    df = main_loop(chosen_reward, 500)
+    df = main_loop(chosen_reward, 1000)
     reward_func_name = chosen_reward.__name__
-    df.to_parquet(f"data_{reward_func_name}.parquet", index=False)
+    df.to_parquet(f"datasets/data_{reward_func_name}.parquet", index=False)
 
 main()
