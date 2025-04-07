@@ -53,16 +53,33 @@ def reward_HDI(world):
 
     # le: life expactancy [years], want a high value
     # j/pop: determine unemployment, a high value is seeked and would simule a low global unemployment
-    # d1: deaths per year, ages 0-14 [persons/year], should simulate infants deaths, wants a low value therefore using a minustecken 
+    # sopc: service output per capital [dollars/person-year], will substitute for GNP
 
-    # Collect max-values from standard run for le, j/pop, -d1 (minustecken pga tvinga att vi vill att den är låg)
-    max_le_standard = np.max(world_standard.le)
-    max_jpop_standard = np.max(world_standard.j / world_standard.pop)
-    max_d1_standard = np.max(world_standard.d1)
+
+    # Collect max/min values
+
+    # le
+    min_le = 20
+    max_le = 85
+    I_le = (world.le - min_le) / (max_le - min_le)
+    I_le = np.clip(I_le, 0, 1)      # keeps the index between 0 and 1
+
+    # j/pop
+    min_jpop = 0
+    max_jpop = 1
+    jpop = world.j/world.pop
+    jpop = np.clip(jpop, 0, 1)
+    I_jpop = (jpop - min_jpop) / (max_jpop - min_jpop)
+
+    # sopc
+    min_sopc = np.min(world_standard.sopc)
+    max_sopc = np.max(world_standard.sopc)
+    I_sopc = (world.sopc - min_sopc) / (max_sopc - min_sopc)
+    I_sopc = np.clip(I_sopc, 0, 1)
+
 
     # Create HDI
-    jpop = world.j/world.pop
-    reward = ((world.le/max_le_standard) + (jpop/max_jpop_standard) - (world.d1/max_d1_standard)) / 3
+    reward = (I_le * I_jpop * I_sopc)**(1/3)
     return reward
 
 #print(reward_HDI(world_standard))
@@ -116,8 +133,8 @@ def get_mu_sigma(world, variable):
     Gets mean and standard deviation of all state variables
     """
     data = getattr(world, variable)
-    mean = np.mean(data) 
-    std = np.std(data)
+    mean = data[0] 
+    std = np.std(data) / 2  # minimize variation in data (we ended up with dubbelt så mkt nr annars, fler extremfall)
     return mean, std
 
 def generate_initial(total_runs, variables):
@@ -136,7 +153,7 @@ def generate_initial(total_runs, variables):
         for variable in variables:
             mu, sigma = get_mu_sigma(world_standard, variable)
             value = np.random.normal(mu, sigma)
-            while value < 0:
+            while value <= 0:
                 value = np.random.normal(mu, sigma)
             dict[variable+"i"]=value 
         array.append(dict)
@@ -191,7 +208,7 @@ def main_loop(reward_func, runs=100):
 
 
 def main():
-    chosen_reward = reward_HSDI
+    chosen_reward = reward_HDI
     df = main_loop(chosen_reward, 1000)
     reward_func_name = chosen_reward.__name__
     df.to_parquet(f"datasets/data_{reward_func_name}.parquet", index=False)
