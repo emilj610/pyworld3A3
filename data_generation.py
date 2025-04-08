@@ -72,8 +72,8 @@ def reward_HDI(world):
     I_jpop = (jpop - min_jpop) / (max_jpop - min_jpop)
 
     # sopc
-    min_sopc = np.min(world_standard.sopc)
-    max_sopc = np.max(world_standard.sopc)
+    min_sopc = np.min(world_standard.sopc)*0.95 #minska extremfall
+    max_sopc = np.max(world_standard.sopc)*1.1 #minska extremfall
     I_sopc = (world.sopc - min_sopc) / (max_sopc - min_sopc)
     I_sopc = np.clip(I_sopc, 0, 1)
 
@@ -106,22 +106,31 @@ def reward_HSDI(world):
     I_jpop = (jpop - min_jpop) / (max_jpop - min_jpop)
 
     # sopc
-    min_sopc = np.min(world_standard.sopc)
-    max_sopc = np.max(world_standard.sopc)
+    min_sopc = np.min(world_standard.sopc)*0.95
+    max_sopc = np.max(world_standard.sopc)*1.05
     I_sopc = (world.sopc - min_sopc) / (max_sopc - min_sopc)
     I_sopc = np.clip(I_sopc, 0, 1)
 
     # ppol/pop
-    min_ppol_pop = 0
-    max_ppol_pop = 1
+    min_ppol_pop = np.min(world_standard.ppol / world_standard.pop)*0.95
+    max_ppol_pop = np.max(world_standard.ppol / world_standard.pop)*1.05  #för att minimera extremvärden
     ppol_pop = world.ppol / world.pop
     ppol_pop = np.clip(ppol_pop, 0, 1)
     I_ppol_pop = 1 - ((ppol_pop - min_ppol_pop) / (max_ppol_pop - min_ppol_pop))
 
     # HSDI
     reward = (I_le * I_jpop * I_sopc * I_ppol_pop)**(1/4)
-    return reward   
+    return I_le, I_jpop, I_sopc, I_ppol_pop, reward
 
+
+I_le, I_jpop, I_sopc, I_ppol_pop, reward =reward_HSDI(world_standard)
+plt.plot(I_le, label='I_le')
+plt.plot(I_jpop, label='I_jpop')
+plt.plot(I_sopc, label='I_sopc')
+plt.plot(I_ppol_pop, label='ppol_pop')
+plt.plot(reward, label='reward')
+plt.legend()
+plt.show()
 
     
 def reward_le_50(world):
@@ -213,4 +222,4 @@ def main():
     reward_func_name = chosen_reward.__name__
     df.to_parquet(f"datasets/data_{reward_func_name}.parquet", index=False)
 
-main()
+#main()
