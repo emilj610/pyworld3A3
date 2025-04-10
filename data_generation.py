@@ -73,7 +73,7 @@ def reward_HDI(world):
 
     # sopc
     min_sopc = np.min(world_standard.sopc)*0.95 #minska extremfall
-    max_sopc = np.max(world_standard.sopc)*1.1 #minska extremfall
+    max_sopc = np.max(world_standard.sopc)*1.05 #minska extremfall
     I_sopc = (world.sopc - min_sopc) / (max_sopc - min_sopc)
     I_sopc = np.clip(I_sopc, 0, 1)
 
@@ -102,8 +102,9 @@ def reward_HSDI(world):
     min_jpop = 0
     max_jpop = 1
     jpop = world.j/world.pop
-    jpop = np.clip(jpop, 0, 1)
+    # jpop = np.clip(jpop, 0, 1)
     I_jpop = (jpop - min_jpop) / (max_jpop - min_jpop)
+    I_jpop = np.clip(I_jpop, 0, 1)
 
     # sopc
     min_sopc = np.min(world_standard.sopc)*0.95
@@ -115,14 +116,15 @@ def reward_HSDI(world):
     min_ppol_pop = np.min(world_standard.ppol / world_standard.pop)*0.95
     max_ppol_pop = np.max(world_standard.ppol / world_standard.pop)*1.05  #för att minimera extremvärden
     ppol_pop = world.ppol / world.pop
-    ppol_pop = np.clip(ppol_pop, 0, 1)
+    # ppol_pop = np.clip(ppol_pop, 0, 1) # ska detta verkligen göras här?
     I_ppol_pop = 1 - ((ppol_pop - min_ppol_pop) / (max_ppol_pop - min_ppol_pop))
+    I_ppol_pop = np.clip(I_ppol_pop, 0, 1)
 
     # HSDI
-    reward = (I_le * I_jpop * I_sopc * I_ppol_pop)**(1/4)
-    return I_le, I_jpop, I_sopc, I_ppol_pop, reward
+    reward = (I_le * I_jpop * I_sopc * I_ppol_pop) ** (1/4)
+    return reward
 
-
+"""
 I_le, I_jpop, I_sopc, I_ppol_pop, reward =reward_HSDI(world_standard)
 plt.plot(I_le, label='I_le')
 plt.plot(I_jpop, label='I_jpop')
@@ -131,7 +133,7 @@ plt.plot(I_ppol_pop, label='ppol_pop')
 plt.plot(reward, label='reward')
 plt.legend()
 plt.show()
-
+"""
     
 def reward_le_50(world):
     return - (world.le - 50) ** 2
@@ -217,9 +219,9 @@ def main_loop(reward_func, runs=100):
 
 
 def main():
-    chosen_reward = reward_HDI
+    chosen_reward = reward_HSDI
     df = main_loop(chosen_reward, 1000)
     reward_func_name = chosen_reward.__name__
     df.to_parquet(f"datasets/data_{reward_func_name}.parquet", index=False)
 
-#main()
+main()
