@@ -72,14 +72,14 @@ def reward_HDI(world):
     I_jpop = (jpop - min_jpop) / (max_jpop - min_jpop)
 
     # sopc
-    min_sopc = np.min(world_standard.sopc)*0.95 #minska extremfall
-    max_sopc = np.max(world_standard.sopc)*1.05 #minska extremfall
-    I_sopc = (world.sopc - min_sopc) / (max_sopc - min_sopc)
-    I_sopc = np.clip(I_sopc, 0, 1)
+    min_iopc = np.min(world_standard.iopc)*0.95 #minska extremfall
+    max_iopc = np.max(world_standard.iopc)*1.05 #minska extremfall
+    I_iopc = (world.iopc - min_iopc) / (max_iopc - min_iopc)
+    I_iopc = np.clip(I_iopc, 0, 1)
 
 
     # Create HDI
-    reward = (I_le * I_jpop * I_sopc)**(1/3)
+    reward = (I_le * I_jpop * I_iopc)**(1/3)
     return reward
 
 #print(reward_HDI(world_standard))
@@ -107,10 +107,10 @@ def reward_HSDI(world):
     I_jpop = np.clip(I_jpop, 0, 1)
 
     # sopc
-    min_sopc = np.min(world_standard.sopc)*0.95
-    max_sopc = np.max(world_standard.sopc)*1.05
-    I_sopc = (world.sopc - min_sopc) / (max_sopc - min_sopc)
-    I_sopc = np.clip(I_sopc, 0, 1)
+    min_iopc = np.min(world_standard.iopc)*0.95
+    max_iopc = np.max(world_standard.iopc)*1.05
+    I_iopc = (world.iopc - min_iopc) / (max_iopc - min_iopc)
+    I_iopc = np.clip(I_iopc, 0, 1)
 
     # ppol/pop
     min_ppol_pop = np.min(world_standard.ppol / world_standard.pop)*0.95
@@ -121,7 +121,7 @@ def reward_HSDI(world):
     I_ppol_pop = np.clip(I_ppol_pop, 0, 1)
 
     # HSDI
-    reward = (I_le * I_jpop * I_sopc * I_ppol_pop) ** (1/4)
+    reward = (I_le * I_jpop * I_iopc * I_ppol_pop) ** (1/4)
     return reward
 
 """
@@ -218,10 +218,11 @@ def main_loop(reward_func, runs=100):
     return df
 
 
-def main():
-    chosen_reward = reward_HSDI
-    df = main_loop(chosen_reward, 1000)
+def main(chosen_reward):
     reward_func_name = chosen_reward.__name__
+    print(f"Creating dataset for {reward_func_name}")
+    df = main_loop(chosen_reward, 1000)
     df.to_parquet(f"datasets/data_{reward_func_name}.parquet", index=False)
 
-main()
+main(reward_HSDI)
+main(reward_HDI)
