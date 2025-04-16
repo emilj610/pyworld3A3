@@ -59,17 +59,19 @@ def reward_HDI(world):
     # Collect max/min values
 
     # le
-    min_le = 20
-    max_le = 85
+    min_le = np.min(world_standard.le) * 0.95
+    max_le = np.max(world_standard.le) * 1.05
     I_le = (world.le - min_le) / (max_le - min_le)
     I_le = np.clip(I_le, 0, 1)      # keeps the index between 0 and 1
 
     # j/pop
-    min_jpop = 0
-    max_jpop = 1
+    ref_jpop = world_standard.j / world_standard.pop
+    min_jpop = np.min(ref_jpop) * 0.95
+    max_jpop = np.max(ref_jpop) * 1.05
+    # max_jpop = 1
     jpop = world.j/world.pop
-    jpop = np.clip(jpop, 0, 1)
     I_jpop = (jpop - min_jpop) / (max_jpop - min_jpop)
+    I_jpop = np.clip(I_jpop, 0, 1)
 
     # sopc
     min_iopc = np.min(world_standard.iopc)*0.95 #minska extremfall
@@ -224,5 +226,5 @@ def main(chosen_reward):
     df = main_loop(chosen_reward, 1000)
     df.to_parquet(f"datasets/data_{reward_func_name}.parquet", index=False)
 
-main(reward_HSDI)
+
 main(reward_HDI)
