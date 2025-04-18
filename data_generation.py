@@ -73,15 +73,16 @@ def reward_HDI(world):
     I_jpop = (jpop - min_jpop) / (max_jpop - min_jpop)
     I_jpop = np.clip(I_jpop, 0, 1)
 
-    # sopc
-    min_iopc = np.min(world_standard.iopc)*0.95 #minska extremfall
-    max_iopc = np.max(world_standard.iopc)*1.05 #minska extremfall
-    I_iopc = (world.iopc - min_iopc) / (max_iopc - min_iopc)
-    I_iopc = np.clip(I_iopc, 0, 1)
+    # GDP
+    min_gdp = np.min(world_standard.iopc + world_standard.sopc)*0.95 #minska extremfall
+    max_gdp = np.max(world_standard.iopc + world_standard.sopc)*1.05 #minska extremfall
+    world_gdp = world.iopc + world.sopc
+    I_gdp = (world_gdp - min_gdp) / (max_gdp - min_gdp)
+    I_gdp = np.clip(I_gdp, 0, 1)
 
 
     # Create HDI
-    reward = (I_le * I_jpop * I_iopc)**(1/3)
+    reward = (I_le * I_jpop * I_gdp)**(1/3)
     return reward
 
 #print(reward_HDI(world_standard))
@@ -95,26 +96,29 @@ def reward_HSDI(world):
     # ppol/pop: persistent pollution per capita
 
     # le
-    min_le = 20
-    max_le = 85
+    min_le = np.min(world_standard.le) * 0.95
+    max_le = np.max(world_standard.le) * 1.05
     I_le = (world.le - min_le) / (max_le - min_le)
-    I_le = np.clip(I_le, 0, 1)      # keeps the index between 0 and 1
+    I_le = np.clip(I_le, 0, 1)       # keeps the index between 0 and 1
 
     # j/pop
-    min_jpop = 0
-    max_jpop = 1
+    ref_jpop = world_standard.j / world_standard.pop
+    min_jpop = np.min(ref_jpop) * 0.95
+    max_jpop = np.max(ref_jpop) * 1.05
+    # max_jpop = 1
     jpop = world.j/world.pop
-    # jpop = np.clip(jpop, 0, 1)
     I_jpop = (jpop - min_jpop) / (max_jpop - min_jpop)
     I_jpop = np.clip(I_jpop, 0, 1)
 
-    # sopc
-    min_iopc = np.min(world_standard.iopc)*0.95
-    max_iopc = np.max(world_standard.iopc)*1.05
-    I_iopc = (world.iopc - min_iopc) / (max_iopc - min_iopc)
-    I_iopc = np.clip(I_iopc, 0, 1)
+    # GDP
+    min_gdp = np.min(world_standard.iopc + world_standard.sopc)*0.95 #minska extremfall
+    max_gdp = np.max(world_standard.iopc + world_standard.sopc)*1.05 #minska extremfall
+    world_gdp = world.iopc + world.sopc
+    I_gdp = (world_gdp - min_gdp) / (max_gdp - min_gdp)
+    I_gdp = np.clip(I_gdp, 0, 1)
 
-    # ppol/pop
+
+    # Pollution
     min_ppol_pop = np.min(world_standard.ppol / world_standard.pop)*0.95
     max_ppol_pop = np.max(world_standard.ppol / world_standard.pop)*1.05  #för att minimera extremvärden
     ppol_pop = world.ppol / world.pop
@@ -123,7 +127,7 @@ def reward_HSDI(world):
     I_ppol_pop = np.clip(I_ppol_pop, 0, 1)
 
     # HSDI
-    reward = (I_le * I_jpop * I_iopc * I_ppol_pop) ** (1/4)
+    reward = (I_le * I_jpop * I_gdp * I_ppol_pop) ** (1/4)
     return reward
 
 """
@@ -227,4 +231,5 @@ def main(chosen_reward):
     df.to_parquet(f"datasets/data_{reward_func_name}.parquet", index=False)
 
 
-main(reward_HDI)
+#main(reward_HDI)
+main(reward_HSDI)
